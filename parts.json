@@ -7,7 +7,12 @@
   ],
   "gz": true,
   "type": "application/wasm",
-  "size": 39514754
+  "size": 39514754,
+  "hashes": [
+   "afcea8505c87",
+   "e870ae8645ce",
+   "c04b3fb46da5"
+  ]
  },
  "index.pck": {
   "files": [
@@ -18,6 +23,12 @@
   ],
   "gz": false,
   "type": "application/octet-stream",
-  "size": 11902484
+  "size": 11902912,
+  "hashes": [
+   "9b94e6a8fb5e",
+   "c077d231010f",
+   "8595b750d301",
+   "251aaa6eac8d"
+  ]
  }
 }

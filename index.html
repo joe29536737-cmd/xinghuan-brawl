@@ -81,7 +81,8 @@
         var chain = Promise.resolve();
         e.files.forEach(function (f, i) {
           chain = chain.then(function () {
-            return origFetch(f).then(function (r) {
+            /* 網址帶內容雜湊：內容變了網址就變，不會拿到快取裡的舊分片 */
+            return origFetch(f + (e.hashes && e.hashes[i] ? "?v=" + e.hashes[i] : "")).then(function (r) {
               if (!r.ok) throw new Error("無法下載 " + f + "（" + r.status + "）");
               return r.arrayBuffer();
             }).then(function (b) { bufs[i] = b; done++; say("正在下載遊戲檔 " + done + " / " + total); });
@@ -222,7 +223,7 @@
   </script>
   <script src="index.js"></script>
   <script>
-    const engine = new Engine({"args":[],"canvasResizePolicy":2,"emscriptenPoolSize":8,"ensureCrossOriginIsolationHeaders":true,"executable":"index","experimentalVK":false,"fileSizes":{"index.pck":11902484,"index.wasm":39514754},"focusCanvas":true,"gdextensionLibs":[],"godotPoolSize":4});
+    const engine = new Engine({"args":[],"canvasResizePolicy":2,"emscriptenPoolSize":8,"ensureCrossOriginIsolationHeaders":true,"executable":"index","experimentalVK":false,"fileSizes":{"index.pck":11902912,"index.wasm":39514754},"focusCanvas":true,"gdextensionLibs":[],"godotPoolSize":4});
     engine.startGame({ onProgress: (current, total) => {
       if (total > 0) { progressEl.removeAttribute('value'); progressEl.value = current / total; }
       else { progressEl.removeAttribute('value'); }

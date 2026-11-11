@@ -1,0 +1,23 @@
+{
+ "index.wasm": {
+  "files": [
+   "index.wasm.gz.000",
+   "index.wasm.gz.001",
+   "index.wasm.gz.002"
+  ],
+  "gz": true,
+  "type": "application/wasm",
+  "size": 39514754
+ },
+ "index.pck": {
+  "files": [
+   "index.pck.000",
+   "index.pck.001",
+   "index.pck.002",
+   "index.pck.003"
+  ],
+  "gz": false,
+  "type": "application/octet-stream",
+  "size": 11732016
+ }
+}

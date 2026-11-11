@@ -49,29 +49,46 @@
     function retryGame() { if (started) return; started = true; retry.disabled = true; retry.style.display = 'none'; statusEl.textContent = '重新載入遊戲…'; location.reload(); }
     retry.addEventListener('click', retryGame);
     function showBootError(error) {
-      const message = String(error?.message || error?.reason?.message || error?.reason || error || '未知啟動錯誤').replace(/\s+/g, ' ').slice(0, 140);
+      const message = String(error?.message || error?.reason?.message || error?.reason || error || '未知啟動錯誤').replace(/\s+/g, ' ').slice(0, 200);
       console.error('[星環大亂鬥] Godot 啟動失敗：', error);
-      statusEl.textContent = `載入失敗：${message}`;
+      statusEl.textContent = `載入失敗：${message}｜${window.__xhDiag ? window.__xhDiag() : ''}`;
       retry.style.display = 'inline-flex';
     }
     window.addEventListener('error', (event) => showBootError(event.error || event.message));
     window.addEventListener('unhandledrejection', (event) => showBootError(event.reason));
   </script>
   <script>
-  /* 大檔分片載入：index.wasm / index.pck 若有 parts.json 就從分片組回 */
+  /* 大檔分片載入：index.wasm / index.pck 若有 parts.json 就從分片組回（逐片下載並顯示進度） */
   (function () {
-    var origFetch = window.fetch.bind(window), manifest = null;
+    var origFetch = window.fetch.bind(window), manifest = null, done = 0, total = 0;
+    function say(t) { var el = document.getElementById("status"); if (el) el.textContent = t; }
+    window.__xhDiag = function () {
+      return "瀏覽器：" + navigator.userAgent.slice(0, 120) + "｜解壓縮：" + (typeof DecompressionStream) + "｜WebGL2：" + (!!document.createElement("canvas").getContext("webgl2"));
+    };
     window.fetch = function (input, init) {
       var url = typeof input === "string" ? input : (input && input.url) || "";
       var name = url.split("?")[0].split("/").pop();
       if (name !== "index.wasm" && name !== "index.pck") return origFetch(input, init);
-      manifest = manifest || origFetch("parts.json", { cache: "no-cache" }).then(function (r) { return r.ok ? r.json() : null; }).catch(function () { return null; });
+      manifest = manifest || origFetch("parts.json", { cache: "no-cache" }).then(function (r) { return r.ok ? r.json() : null; }).catch(function () { return null; })
+        .then(function (m) { if (m) { total = 0; Object.keys(m).forEach(function (k) { total += m[k].files.length; }); } return m; });
       return manifest.then(function (m) {
         var e = m && m[name];
         if (!e) return origFetch(input, init);
-        return Promise.all(e.files.map(function (f) {
-          return origFetch(f).then(function (r) { if (!r.ok) throw new Error("無法下載 " + f); return r.arrayBuffer(); });
-        })).then(function (bufs) {
+        if (e.gz && typeof DecompressionStream === "undefined") {
+          throw new Error("瀏覽器版本太舊，無法解壓遊戲檔（iPhone 需 iOS 16.4 以上，或改用最新版 Chrome / Safari）");
+        }
+        var bufs = [];
+        var chain = Promise.resolve();
+        e.files.forEach(function (f, i) {
+          chain = chain.then(function () {
+            return origFetch(f).then(function (r) {
+              if (!r.ok) throw new Error("無法下載 " + f + "（" + r.status + "）");
+              return r.arrayBuffer();
+            }).then(function (b) { bufs[i] = b; done++; say("正在下載遊戲檔 " + done + " / " + total); });
+          });
+        });
+        return chain.then(function () {
+          say("正在解壓遊戲檔…");
           var blob = new Blob(bufs);
           var body = e.gz ? blob.stream().pipeThrough(new DecompressionStream("gzip")) : blob.stream();
           var headers = { "Content-Type": e.type };
@@ -80,6 +97,12 @@
         });
       });
     };
+    setTimeout(function () {
+      if (document.body.classList.contains("game-ready")) return;
+      var el = document.getElementById("status");
+      if (el) el.textContent = (el.textContent || "") + "（載入較久，若一直沒動請按重新載入）｜" + window.__xhDiag();
+      var r = document.getElementById("retry"); if (r) r.style.display = "inline-flex";
+    }, 90000);
   })();
   </script>
   <script>
@@ -203,7 +226,7 @@
     engine.startGame({ onProgress: (current, total) => {
       if (total > 0) { progressEl.removeAttribute('value'); progressEl.value = current / total; }
       else { progressEl.removeAttribute('value'); }
-      statusEl.textContent = total > 0 ? `正在載入遊戲資源 ${Math.round(current / total * 100)}%` : '正在載入遊戲資源…';
+      if (current > 0) statusEl.textContent = total > 0 ? `正在啟動遊戲 ${Math.round(current / total * 100)}%` : '正在啟動遊戲…';
     }}).then(() => {
       progressEl.value = 1;
       statusEl.textContent = '載入完成';

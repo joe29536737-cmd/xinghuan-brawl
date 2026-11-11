@@ -1,0 +1,30 @@
+<!doctype html>
+<html lang="zh-Hant"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>星環大亂鬥 手機診斷</title>
+<style>body{font:15px/1.6 -apple-system,sans-serif;background:#101827;color:#eee;padding:16px}li{margin:6px 0}.ok{color:#7fe08a}.bad{color:#ff7a6b}</style></head>
+<body><h2>手機診斷</h2><p>請等到最下面出現「全部完成」，再截圖給 Claude。</p><ol id="out"></ol>
+<script>
+const out=document.getElementById('out');
+function log(t,ok){const li=document.createElement('li');li.textContent=t;if(ok!==undefined)li.className=ok?'ok':'bad';out.appendChild(li);}
+(async()=>{
+ log('瀏覽器：'+navigator.userAgent);
+ const c=document.createElement('canvas');const gl=c.getContext('webgl2');
+ log('WebGL2：'+(gl?'支援':'不支援'),!!gl);
+ if(gl){const d=gl.getExtension('WEBGL_debug_renderer_info');log('顯示卡：'+(d?gl.getParameter(d.UNMASKED_RENDERER_WEBGL):'?'));log('最大貼圖：'+gl.getParameter(gl.MAX_TEXTURE_SIZE));}
+ log('WebAssembly：'+(typeof WebAssembly),typeof WebAssembly==='object');
+ log('解壓縮 DecompressionStream：'+(typeof DecompressionStream),typeof DecompressionStream==='function');
+ log('IndexedDB：'+(typeof indexedDB),typeof indexedDB==='object');
+ for(const mb of [256,512,1024]){try{new WebAssembly.Memory({initial:mb*16});log('可配置記憶體 '+mb+' MB：可以',true);}catch(e){log('可配置記憶體 '+mb+' MB：失敗 '+e.message,false);}}
+ try{
+  const t0=performance.now();const m=await (await fetch('parts.json',{cache:'no-cache'})).json();
+  for(const name of Object.keys(m)){const e=m[name];const bufs=[];
+   for(const f of e.files){const r=await fetch(f,{cache:'no-cache'});if(!r.ok)throw new Error(f+' '+r.status);bufs.push(await r.arrayBuffer());}
+   let blob=new Blob(bufs);let size=blob.size;
+   if(e.gz){const ab=await new Response(blob.stream().pipeThrough(new DecompressionStream('gzip'))).arrayBuffer();size=ab.byteLength;
+     if(name==='index.wasm'){try{await WebAssembly.compile(ab);log('引擎編譯：成功',true);}catch(x){log('引擎編譯：失敗 '+x.message,false);}}}
+   log(name+' 下載組合：'+size+' / '+e.size+' bytes',size===e.size);}
+  log('下載花費 '+Math.round(performance.now()-t0)/1000+' 秒');
+ }catch(e){log('下載失敗：'+e.message,false);}
+ log('全部完成');
+})().catch(e=>log('診斷中斷：'+e.message,false));
+</script></body></html>
